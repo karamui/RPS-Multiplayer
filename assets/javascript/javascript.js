@@ -1,7 +1,5 @@
 // TO DO: get chat to show up on both screens in real time
-// fix functionality of text displays - text not syncing correctly (colors work though)
-// some issues with setting which player is which - lost on page refresh - need to find a way to make them disconnect
-// name box not hiding correctly
+// get background colors on icons to show up correctly on BOTH screens
 
 // ------------------------------------ initializing firebase
 var config = {
@@ -34,8 +32,33 @@ var p2ties = 0;
 var p2losses = 0;
 var player2 = false;
 
-// use this to reset the database:
+// uncomment this to reset the database:
 //sendToDatabase();
+
+// detect page refresh and remove the player who left
+$(window).on("unload", function() {
+    if (player1 == true) {
+        name1 = "";
+        p1select = "";
+        p1wins = 0;
+        p1ties = 0;
+        p1losses = 0;
+        player1 = false;
+        $("#p1score").hide();
+    }
+
+    if (player2 == true) {
+        name2 = "";
+        p2select = "";
+        p2wins = 0;
+        p2ties = 0;
+        p2losses = 0;
+        player2 = false;
+        $("#p2score").hide();
+    }
+
+    sendToDatabase();
+});
 
 // default state: hide start button, selection menu, and scores
 $("#name-form").show();
@@ -61,10 +84,16 @@ database.ref().on("value", function(snapshot) {
     updateScreen();
     updateScores();
 
-    if (name1 == "" || name2 == "") {
+    if ((name1 == "" && player2 != true) || (name2 == "" && player1 != true)) {
         $("#name-form").show();
     } else {
         $("#name-form").hide();
+    }
+
+    if (name1 == "" && player2 == true) {
+        $("#p1score").hide();
+    } else if (name2 == "" && player1 == true) {
+        $("#p2score").hide();
     }
 });
 
@@ -79,14 +108,29 @@ $("#add-name").on("click", function(event) {
     if (name1 == "" && name2 == "") {
         name1 = name;
         player1 = true;
+
+        // announce that player one has joined
+        var p = $("<p>");
+        p.html("<b style='color: red'>" + name1 + " has joined the game.</b>")
+        $("#chat").append(p);
     } else if (name1 != "" && name2 == "") {
         name2 = name;
         player2 = true;
+
+        // announce that player two has joined
+        var p = $("<p>");
+        p.html("<b style='color: blue'>" + name2 + " has joined the game.</b>")
+        $("#chat").append(p);
         $("#name-form").hide();
     } else if (name1 == "" && name2 != "") {
         name1 = name;
         player1 = true;
         $("#name-form").hide();
+
+        // announce that player one has joined
+        var p = $("<p>");
+        p.html("<b style='color: red'>" + name1 + " has joined the game.</b>")
+        $("#chat").append(p);
     } else {
         $("#name-form").hide();
     }
@@ -126,18 +170,20 @@ $("#send-chat").on("click", function(event) {
 
 // selection of rock
 $(".rock").on("click", function() {
+    console.log(player1);
+    console.log(player2);
     if (player1 == true && p1select == "") {
         p1select = "rock";
         $("#rock1").css("background-color", "red");
-    } else if (player2 == true && p2select == "") {
+    } 
+
+    if (player2 == true && p2select == "") {
         p2select = "rock";
         $("#rock2").css("background-color", "red");
-    } else {
-        alert("Stop trying to cheat!");
-    }
+    } 
 
-    showResult();
     sendToDatabase();
+    showResult();
 })
 
 // selection of paper
@@ -145,15 +191,15 @@ $(".paper").on("click", function() {
     if (player1 == true && p1select == "") {
         p1select = "paper";
         $("#paper1").css("background-color", "red");
-    } else if (player2 == true && p2select == "") {
+    } 
+
+    if (player2 == true && p2select == "") {
         p2select = "paper";
         $("#paper2").css("background-color", "red");
-    } else {
-        alert("Stop trying to cheat!");
-    }
+    } 
 
-    showResult();
     sendToDatabase();
+    showResult();
 })
 
 // selection of scissors
@@ -161,15 +207,15 @@ $(".scissors").on("click", function() {
     if (player1 == true && p1select == "") {
         p1select = "scissors";
         $("#scissors1").css("background-color", "red");
-    } else if (player2 == true && p2select == "") {
+    } 
+
+    if (player2 == true && p2select == "") {
         p2select = "scissors";
         $("#scissors2").css("background-color", "red");
-    } else {
-        alert("Stop trying to cheat!");
-    }
+    } 
 
-    showResult();
     sendToDatabase();
+    showResult();
 })
 
 // end game
@@ -226,11 +272,11 @@ function runGame() {
 
     if (player1 == true) {
         $("#p1select").show();
-        //$("#p2select").hide();
+        $("#p2select").hide();
     } 
 
     if (player2 == true) {
-        //$("#p1select").hide();
+        $("#p1select").hide();
         $("#p2select").show();
     }
 }
@@ -296,30 +342,30 @@ function showResult() {
         } else {
             alert("Oops! Something went wrong!");
         }
+
+        updateScores();
+
+        // show player choices
+        $("#p1select").show();
+        $("#p2select").show();
+
+        // reset selections for next turn
+        setTimeout(function() {
+            $("#result").text("Waiting for players to choose!");
+            $("#middle").css("background-color", "black");
+
+            // reset selections
+            p1select = "";
+            p2select = "";
+
+            // reset all background colors of icons
+            $("img").css("background-color", "white");
+
+            runGame();
+        }, 2000);
+
+        sendToDatabase();
     }
-
-    updateScores();
-
-    // show player choices
-    $("#p1select").show();
-    $("#p2select").show();
-
-    // reset selections for next turn
-    setTimeout(function() {
-        $("#result").text("Waiting for players to choose!");
-        $("#middle").css("background-color", "black");
-
-        // reset selections
-        p1select = "";
-        p2select = "";
-
-        // reset all background colors of icons
-        $("img").css("background-color", "white");
-
-        runGame();
-    }, 2000);
-
-    sendToDatabase();
 }
 
 // display scores
@@ -346,13 +392,18 @@ function updateScreen() {
         $("#player1").text("Player 1");
         $("#player2").text(name2);
         $("#p2score").show();
-    } else if (name1 != "" && name2 != "") {
+    } else if (name1 != "" && name2 != "" && p1select == "" && p2select == "") {
         $("#result").text("Waiting for players to choose!");
         $("#player1").text(name1);
         $("#p1score").show();
         $("#player2").text(name2);
         $("#p2score").show();
         runGame();
+    } else if (name1 != "" && name2 != "") {
+        $("#player1").text(name1);
+        $("#p1score").show();
+        $("#player2").text(name2);
+        $("#p2score").show();
     } else {
         alert("Oops! Something went wrong!");
     }
