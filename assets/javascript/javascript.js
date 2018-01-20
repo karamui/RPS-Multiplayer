@@ -1,7 +1,4 @@
-// TO DO: get chat to show up on both screens in real time
-// get background colors on icons to show up correctly on BOTH screens
-
-// ------------------------------------ initializing firebase
+// initializing firebase
 var config = {
     apiKey: "AIzaSyAT7sJ8-IImUQY0Fs4iWMoBVcf9tUl6raQ",
     authDomain: "rps-game-3e8f1.firebaseapp.com",
@@ -14,9 +11,7 @@ var config = {
 firebase.initializeApp(config);
 var database = firebase.database();
 
-// ------------------------------------ 
-
-// player one
+// player one variables
 var name1 = "";
 var p1select = "";
 var p1wins = 0;
@@ -24,7 +19,7 @@ var p1ties = 0;
 var p1losses = 0;
 var player1 = false;
 
-// player two
+// player two variables
 var name2 = "";
 var p2select = "";
 var p2wins = 0;
@@ -32,29 +27,30 @@ var p2ties = 0;
 var p2losses = 0;
 var player2 = false;
 
-// uncomment this to reset the database:
-//sendToDatabase();
+// icon color assignments
+var rock1 = "white";
+var rock2 = "white";
+var paper1 = "white";
+var paper2 = "white";
+var scissors1 = "white";
+var scissors2 = "white";
+
+// chat variables
+var chatarray = ["You can chat with your opponent here!"];
+var chatindex = 0;
+var addchat = false;
+
+// uncomment this to reset the database
+// sendToDatabase();
 
 // detect page refresh and remove the player who left
 $(window).on("unload", function() {
     if (player1 == true) {
-        name1 = "";
-        p1select = "";
-        p1wins = 0;
-        p1ties = 0;
-        p1losses = 0;
-        player1 = false;
-        $("#p1score").hide();
+       resetPlayerOne();
     }
 
     if (player2 == true) {
-        name2 = "";
-        p2select = "";
-        p2wins = 0;
-        p2ties = 0;
-        p2losses = 0;
-        player2 = false;
-        $("#p2score").hide();
+       resetPlayerTwo();
     }
 
     sendToDatabase();
@@ -80,24 +76,58 @@ database.ref().on("value", function(snapshot) {
     p2wins = snapshot.val().p2wins;
     p2losses = snapshot.val().p2losses;
     p2ties = snapshot.val().p2ties;
+    rock1 = snapshot.val().rock1;
+    rock2 = snapshot.val().rock2;
+    paper1 = snapshot.val().paper1;
+    paper2 = snapshot.val().paper2;
+    scissors1 = snapshot.val().scissors1;
+    scissors2 = snapshot.val().scissors2;
+    chatarray = snapshot.val().chatarray;
+    chatindex = snapshot.val().chatindex;
+    addchat = snapshot.val().addchat;
 
     updateScreen();
     updateScores();
 
+    // hide or display the start button depending on current players
     if ((name1 == "" && player2 != true) || (name2 == "" && player1 != true)) {
         $("#name-form").show();
     } else {
         $("#name-form").hide();
     }
 
+    // hide or display scores depending on current players
     if (name1 == "" && player2 == true) {
         $("#p1score").hide();
     } else if (name2 == "" && player1 == true) {
         $("#p2score").hide();
     }
+
+    // set icon colors
+    $("#rock1").css("background-color", rock1);
+    $("#rock2").css("background-color", rock2);
+    $("#paper1").css("background-color", paper1);
+    $("#paper2").css("background-color", paper2);
+    $("#scissors1").css("background-color", scissors1);
+    $("#scissors2").css("background-color", scissors2);
+
+    // populate chat
+    if (addchat == true) {
+        for (var i = chatindex; i < chatarray.length; i++) {
+            // create new chat line and add user input
+            var p = $("<p>");
+            p.html(chatarray[i]);
+            
+            // append to chat and scroll to show latest entry
+            $("#chat").append(p);
+            $("#chat").animate({scrollTop: p.offset().top}, 500);
+        }
+
+        addchat = false;
+    }
 });
 
-// beginning the game by adding your name
+// begin the game by adding your name
 $("#add-name").on("click", function(event) {
     // prevents form from submitting
     event.preventDefault();
@@ -110,27 +140,33 @@ $("#add-name").on("click", function(event) {
         player1 = true;
 
         // announce that player one has joined
-        var p = $("<p>");
-        p.html("<b style='color: red'>" + name1 + " has joined the game.</b>")
-        $("#chat").append(p);
+        var chat = "<b style='color: red'>" + name1 + " has joined the game.</b>";
+        chatarray.push(chat);
+        chatindex++;
+        addchat = true;
+
     } else if (name1 != "" && name2 == "") {
         name2 = name;
         player2 = true;
+        $("#name-form").hide();
 
         // announce that player two has joined
-        var p = $("<p>");
-        p.html("<b style='color: blue'>" + name2 + " has joined the game.</b>")
-        $("#chat").append(p);
-        $("#name-form").hide();
+        var chat = "<b style='color: blue'>" + name2 + " has joined the game.</b>";
+        chatarray.push(chat);
+        chatindex++;
+        addchat = true;
+
     } else if (name1 == "" && name2 != "") {
         name1 = name;
         player1 = true;
         $("#name-form").hide();
 
         // announce that player one has joined
-        var p = $("<p>");
-        p.html("<b style='color: red'>" + name1 + " has joined the game.</b>")
-        $("#chat").append(p);
+        var chat = "<b style='color: red'>" + name1 + " has joined the game.</b>";
+        chatarray.push(chat);
+        chatindex++;
+        addchat = true;
+
     } else {
         $("#name-form").hide();
     }
@@ -146,40 +182,37 @@ $("#send-chat").on("click", function(event) {
     // grabs user input and trims excess spaces
     var chat = $("#chat-input").val().trim();
 
-    // create new chat line and add user input
-    var p = $("<p>");
-    
-    if (player1 == true) {
-        p.html("<b style='color: red'>" + name1 + ":</b> " + chat);
-    } else if (player2 == true) {
-        p.html("<b style='color: blue'>" + name2 + ":</b> " + chat);
-    } else {
-        p.text(chat);
-    }
+     if (player1 == true) {
+            chat = "<b style='color: red'>" + name1 + ":</b> " + chat;
+        } else if (player2 == true) {
+            chat = "<b style='color: blue'>" + name2 + ":</b> " + chat;
+        } else {
+            chat = chat;
+        }
 
-    // append to chat and scroll to show latest entry
-    $("#chat").append(p);
-    $("#chat").animate({scrollTop: p.offset().top}, 500);
+    chatarray.push(chat);
+    chatindex++;
+    addchat = true;
 
     // clears user input
     // reference: https://stackoverflow.com/questions/8701812/clear-form-after-submission-with-jquery
     $("#chat-form").each(function() {
         this.reset();
     });
+
+    sendToDatabase();
 });
 
 // selection of rock
 $(".rock").on("click", function() {
-    console.log(player1);
-    console.log(player2);
     if (player1 == true && p1select == "") {
         p1select = "rock";
-        $("#rock1").css("background-color", "red");
+        rock1 = "red";
     } 
 
     if (player2 == true && p2select == "") {
         p2select = "rock";
-        $("#rock2").css("background-color", "red");
+        rock2 = "blue";
     } 
 
     sendToDatabase();
@@ -190,12 +223,12 @@ $(".rock").on("click", function() {
 $(".paper").on("click", function() {
     if (player1 == true && p1select == "") {
         p1select = "paper";
-        $("#paper1").css("background-color", "red");
+        paper1 = "red";
     } 
 
     if (player2 == true && p2select == "") {
         p2select = "paper";
-        $("#paper2").css("background-color", "red");
+        paper2 = "blue";
     } 
 
     sendToDatabase();
@@ -206,12 +239,12 @@ $(".paper").on("click", function() {
 $(".scissors").on("click", function() {
     if (player1 == true && p1select == "") {
         p1select = "scissors";
-        $("#scissors1").css("background-color", "red");
+        scissors1 = "red";
     } 
 
     if (player2 == true && p2select == "") {
         p2select = "scissors";
-        $("#scissors2").css("background-color", "red");
+        scissors2 = "blue";
     } 
 
     sendToDatabase();
@@ -225,46 +258,65 @@ $("button").on("click", function() {
         this.reset();
     });
 
+    // if player one quits
     if (player1 == true) {
-        // announce that player one has left
-        var p = $("<p>");
-        p.html("<b style='color: red'>" + name1 + " has left the game.</b>")
-        $("#chat").append(p);
-
-        // reset player one
-        $("#player1").text("Player 1");
-        $("#result").text("Waiting on Player 1...");
-        p1wins = 0;
-        p1losses = 0;
-        p1ties = 0;
-        p1select = "";
-        name1 = "";
-        $("#name-form").show();
-        $("#p1select").hide();
-        $("#p1score").hide();
+        resetPlayerOne();
     } 
 
+    // if player two quits
     if (player2 == true) {
-        // announce that player two has left
-        var p = $("<p>");
-        p.html("<b style='color: blue'>" + name2 + " has left the game.</b>")
-        $("#chat").append(p);
-
-        // reset player two
-        $("#player2").text("Player 2");
-        $("#result").text("Waiting on Player 2...");
-        p2wins = 0;
-        p2losses = 0;
-        p2ties = 0;
-        p2select = "";
-        name2 = "";
-        $("#name-form").show();
-        $("#p2select").hide();
-        $("#p2score").hide();
+        resetPlayerTwo();
     }
 
     sendToDatabase();
 })
+
+function resetPlayerOne() {
+    // announce that player one has left
+    var chat = "<b style='color: red'>" + name1 + " has left the game.</b>";
+    chatarray.push(chat);
+    chatindex++;
+    addchat = true;
+
+    // reset player one
+    $("#player1").text("Player 1");
+    $("#result").text("Waiting on Player 1...");
+    p1wins = 0;
+    p1losses = 0;
+    p1ties = 0;
+    p1select = "";
+    name1 = "";
+    rock1 = "white";
+    paper1 = "white";
+    scissors1 = "white";
+    $("#name-form").show();
+    $("#p1select").hide();
+    $("#p1score").hide();
+}
+
+function resetPlayerTwo() {
+    // announce that player two has left
+    var p = $("<p>");
+    var chat = "<b style='color: blue'>" + name2 + " has left the game.</b>";
+    chatarray.push(chat);
+    chatindex++;
+    addchat = true;
+
+    // reset player two
+    $("#player2").text("Player 2");
+    $("#result").text("Waiting on Player 2...");
+    p2wins = 0;
+    p2losses = 0;
+    p2ties = 0;
+    p2select = "";
+    name2 = "";
+    rock2 = "white";
+    paper2 = "white";
+    scissors2 = "white";
+    $("#name-form").show();
+    $("#p2select").hide();
+    $("#p2score").hide();
+}
 
 // allow players to make a selection
 function runGame() {
@@ -294,6 +346,15 @@ function sendToDatabase() {
         p2wins: p2wins,
         p2losses: p2losses,
         p2ties: p2ties,
+        rock1: rock1,
+        rock2: rock2,
+        paper1: paper1,
+        paper2: paper2,
+        scissors1: scissors1,
+        scissors2: scissors2,
+        chatarray: chatarray,
+        chatindex: chatindex,
+        addchat: addchat
     });
 }
 
@@ -343,7 +404,7 @@ function showResult() {
             alert("Oops! Something went wrong!");
         }
 
-        updateScores();
+        sendToDatabase();
 
         // show player choices
         $("#p1select").show();
@@ -359,12 +420,16 @@ function showResult() {
             p2select = "";
 
             // reset all background colors of icons
-            $("img").css("background-color", "white");
+            rock1 = "white";
+            rock2 = "white";
+            paper1 = "white";
+            paper2 = "white";
+            scissors1 = "white";
+            scissors2 = "white";
 
+            sendToDatabase();
             runGame();
         }, 2000);
-
-        sendToDatabase();
     }
 }
 
@@ -404,6 +469,7 @@ function updateScreen() {
         $("#p1score").show();
         $("#player2").text(name2);
         $("#p2score").show();
+        runGame();
     } else {
         alert("Oops! Something went wrong!");
     }

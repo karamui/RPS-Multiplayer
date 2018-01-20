@@ -47,8 +47,12 @@ img {
 	background-color: white;
 }
 
-img:hover {
+img#rock1:hover, img#paper1:hover, img#scissors1:hover {
 	background-color: red !important;
+}
+
+img#rock2:hover, img#paper2:hover, img#scissors2:hover {
+	background-color: blue !important;
 }
 
 /* ------------------------------------ FORMS AND CHAT */
